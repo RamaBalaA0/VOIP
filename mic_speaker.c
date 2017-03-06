@@ -34,7 +34,7 @@ int main(int argc, char*argv[]) {
         fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(error));
         goto finish;
     }
-    /* Create the recording stream */
+    /* Create the recording stream*/
     if (!(sin = pa_simple_new(NULL, argv[0], PA_STREAM_RECORD, NULL, "record", &ss, NULL, NULL, &error))) {
         fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(error));
         goto finish;
@@ -47,14 +47,14 @@ int main(int argc, char*argv[]) {
 
 #if 1
         pa_usec_t latency;
-
+	/*Latency time for microphone*/
         if ((latency = pa_simple_get_latency(sin, &error)) == (pa_usec_t) -1) {
             fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
             goto finish;
         }
 
         //fprintf(stderr, "%MIC : 0.0f usec\n", (float)latency);
-
+	/*Latency time for speaker*/
         if ((latency = pa_simple_get_latency(sout, &error)) == (pa_usec_t) -1) {
             fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
             goto finish;
@@ -63,13 +63,13 @@ int main(int argc, char*argv[]) {
         //fprintf(stderr, "Speaker : %0.0f usec\n", (float)latency);
 #endif
 
-        /* Record some data blocks from stream ... */
+        /* Record some data blocks from stream ...i.e., Microphone */
         if (pa_simple_read(sin, buf, sizeof(buf), &error) < 0) {
             fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
             goto finish;
         }
 
-        /* ... and play it,writing the data to the stream */
+        /* ... and play it,writing the data to the stream i.e., Speaker*/
         if (pa_simple_write(sout, buf, sizeof(buf), &error) < 0) {
             fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
             goto finish;
