@@ -21,7 +21,7 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
-#define BUFSIZE 100
+#define BUFSIZE 1024
 
 
 //#define PORT "3490"  // the port users will be connecting to
