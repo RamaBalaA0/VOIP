@@ -20,7 +20,7 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
-#define BUFSIZE 1024
+#define BUFSIZE 32
 #define PORT "3490" // the port client will be connecting to 
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
    /* The sample type to use */
     static const pa_sample_spec ss = {
         .format = PA_SAMPLE_S16LE,
-        .rate = 44100,
+        .rate = 8000,
         .channels = 2
     };
     pa_simple *sout = NULL;

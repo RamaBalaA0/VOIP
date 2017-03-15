@@ -21,7 +21,7 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
-#define BUFSIZE 1024
+#define BUFSIZE 32
 
 
 //#define PORT "3490"  // the port users will be connecting to
@@ -158,7 +158,7 @@ The accept() function shall extract the first connection on  the  queue
     /* The Sample format to use */
     static const pa_sample_spec ss = {
         .format = PA_SAMPLE_S16LE,			//signed 16 bit PCM Encoding
-        .rate = 44100,
+        .rate = 8000,
         .channels = 2
     };
 
