@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
+#include<sys/time.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -20,39 +21,35 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
-#define BUFSIZE 32
-#define PORT "3490" // the port client will be connecting to 
+#define PORT "3490" 			// the port client will be connecting to 
 
-#define MAXDATASIZE 1024 // max number of bytes we can get at once 
+#define MAXDATASIZE 1024		// Packet size
+#define PERIOD 1			// Period in micro seconds 
 
 /*Global Varaibles */
 struct itimerval it;
 struct timeval start;
 pa_simple *sout = NULL;
+struct packet{
+long int time;
 uint8_t buf[MAXDATASIZE];
+};					//Attaching Timestamp to every packet
+
 int sockfd,error;
 /* Signal Alarm Handler for periodic execution*/
 void sigalrm_handler(int sig)
 {
-
-/*latency varying from 30msec-400msec*/
-#if 0
-        pa_usec_t latency;
-
-        if ((latency = pa_simple_get_latency(sout, &error)) == (pa_usec_t) -1) {
-            fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
-            goto finish;
-        }
-
-        fprintf(stderr, "%0.0f usec    \r", (float)latency);
-#endif
-
+struct packet *data;
+data=(struct packet *) malloc(sizeof(struct packet));
+	
         /* Record some data blocks from stream ... */
-        if (pa_simple_read(sout, buf, sizeof(buf), &error) < 0) {
+        if (pa_simple_read(sout, data->buf, sizeof(data->buf), &error) < 0) {
             fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
         }
-	
-	if (send(sockfd,buf,sizeof(buf), 0) == -1)
+	gettimeofday(&start, NULL);
+	data->time=start.tv_sec * 1000000 + start.tv_usec;
+	//printf("%ld",data->time);
+	if (send(sockfd,data,sizeof(struct packet), 0) == -1)		//Sending the packet with Timestamp and Data.
                 perror("send");
 	//printf("sent a block");
 
@@ -129,14 +126,14 @@ int main(int argc, char *argv[])
 
     inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
             s, sizeof s);
-    printf("client: connected to %s\n\n ", s);
+    printf("client: connected to %s\n", s);
     
     freeaddrinfo(servinfo); // all done with this structure
     /*Timer Initialization*/
     it.it_value.tv_sec     = 0;      
     it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
     it.it_interval.tv_sec  = 0;     
-    it.it_interval.tv_usec = 2000;     /* repeat every 2 milli seconds */
+    it.it_interval.tv_usec = PERIOD;     /* repeat every 2 milli seconds */
 
     signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
 
@@ -145,13 +142,12 @@ int main(int argc, char *argv[])
      * function does its thing regardless of this
      */
     gettimeofday(&start, NULL);
-    printf("Call started at %ld\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
-    printf("Hey client Speak : \n");
+    printf("Call started at %ld usec\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
+    printf("Hey client Speak...\n");
     setitimer(ITIMER_REAL, &it, NULL);
 
-    printf("  To exit the program, Press 'Enter' key.\n");
-    while (fgets(buffer, sizeof(buffer), stdin) && (strlen(buffer) > 1)) {
-    }
+    printf("To exit the program, Press CTRL+C.\n");
+    while (1);
 
     printf("Bye\n");
     /*Finish by flushing the stream*/

@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <string.h>
 #include <fcntl.h>
+#include<sys/time.h>
 
 #include <pulse/simple.h>
 #include <pulse/error.h>
@@ -23,28 +24,36 @@
 
 
 
-//#define PORT "3490"  // the port users will be connecting to
+//#define PORT "3490"  			// the port users will be connecting to
 
-#define BACKLOG 10     // how many pending connections queue will hold
+#define BACKLOG 1   			// how many pending connections queue will hold
 
-#define MAXDATASIZE 1024
+#define MAXDATASIZE 1024		// Packet size--1024
+#define PERIOD 1			// Period in micro seconds 
 
 struct itimerval it;
 struct timeval start;
+struct packet{
+long int time;
 uint8_t buf[MAXDATASIZE];
+};					//Attaching Timestamp to every packet
+
 int sockfd, new_fd,error,numbytes;
 pa_simple *st_in = NULL;
 
 void sigalrm_handler(int sig) {
-
-//printf("hello");	
-if ((numbytes = recv(new_fd, buf, sizeof(buf), 0)) == -1) {
+struct packet *data;
+data=(struct packet *) malloc(sizeof(struct packet));
+	
+if ((numbytes = recv(new_fd, data, sizeof(struct packet), 0)) == -1) {
      perror("recv");
      exit(1);
      }
+gettimeofday(&start, NULL);			//Detaching Timestamp from every packet and calculating transmit delay.
+fprintf(stderr, "Delay for every packet is %ld usec    \r",(start.tv_sec * 1000000 + start.tv_usec)-data->time);
 
 /* ... and play it,writing the data to the stream */
-if (pa_simple_write(st_in, buf,sizeof(buf), &error) < 0) {
+if (pa_simple_write(st_in, data->buf,sizeof(data->buf), &error) < 0) {
      fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
      exit(1);
      }
@@ -181,7 +190,7 @@ The accept() function shall extract the first connection on  the  queue
     it.it_value.tv_sec     = 0;      
     it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
     it.it_interval.tv_sec  = 0;     
-    it.it_interval.tv_usec = 2000;     /* repeat every 2 milli seconds */
+    it.it_interval.tv_usec = PERIOD;     /* repeat every 2 milli seconds */
 
     signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
 
@@ -204,11 +213,10 @@ The accept() function shall extract the first connection on  the  queue
         goto finish;
     }
 
-    printf(" Listen to client");
+    printf("Listening to client...\n");
     setitimer(ITIMER_REAL, &it, NULL);
-    printf("  To exit the program, Press 'Enter' key.\n");
-    while (fgets(buffer, sizeof(buffer), stdin) && (strlen(buffer) > 1)) {
-    }
+    printf("To exit the program, Press CTRL+C key.\n");
+    while (1);
 
     printf("Bye\n");
 
