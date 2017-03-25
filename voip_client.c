@@ -23,7 +23,7 @@
 #define BUFSIZE 32
 #define PORT "3490" // the port client will be connecting to 
 
-#define MAXDATASIZE 100 // max number of bytes we can get at once 
+#define MAXDATASIZE 1024 // max number of bytes we can get at once 
 
 /*Global Varaibles */
 struct itimerval it;
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
    /* The sample type to use */
     static const pa_sample_spec ss = {
         .format = PA_SAMPLE_S16LE,
-        .rate = 8000,
+        .rate = 44100,
         .channels = 2
     };
 
@@ -91,20 +91,6 @@ int main(int argc, char *argv[])
         fprintf(stderr,"usage: client hostname\n");
         exit(1);
     }
-    /*Timer Initialization*/
-    it.it_value.tv_sec     = 0;      
-    it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
-    it.it_interval.tv_sec  = 0;     
-    it.it_interval.tv_usec = 20000;     /* repeat every 20 milli seconds */
-
-    signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
-
-
-    /* Here's your main program loop. The alarm handler
-     * function does its thing regardless of this
-     */
-    gettimeofday(&start, NULL);
-    printf("Call started at %ld\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
      /* Turn on interval timer,ITIMER_REAL    
      decrements in real time, and delivers SIGALRM upon expiration. */
     setitimer(ITIMER_REAL, &it, NULL);
@@ -146,11 +132,25 @@ int main(int argc, char *argv[])
     printf("client: connected to %s\n\n ", s);
     
     freeaddrinfo(servinfo); // all done with this structure
+    /*Timer Initialization*/
+    it.it_value.tv_sec     = 0;      
+    it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
+    it.it_interval.tv_sec  = 0;     
+    it.it_interval.tv_usec = 2000;     /* repeat every 2 milli seconds */
+
+    signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
+
+
+    /* Here's your main program loop. The alarm handler
+     * function does its thing regardless of this
+     */
+    gettimeofday(&start, NULL);
+    printf("Call started at %ld\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
     printf("Hey client Speak : \n");
-    
-    printf("  To exit the program, Press any key.\n");
+    setitimer(ITIMER_REAL, &it, NULL);
+
+    printf("  To exit the program, Press 'Enter' key.\n");
     while (fgets(buffer, sizeof(buffer), stdin) && (strlen(buffer) > 1)) {
-        printf("You entered: %s\n", buffer);
     }
 
     printf("Bye\n");
