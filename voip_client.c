@@ -25,6 +25,38 @@
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
+/*Global Varaibles */
+struct itimerval it;
+struct timeval start;
+pa_simple *sout = NULL;
+uint8_t buf[MAXDATASIZE];
+int sockfd,error;
+/* Signal Alarm Handler for periodic execution*/
+void sigalrm_handler(int sig)
+{
+
+/*latency varying from 30msec-400msec*/
+#if 0
+        pa_usec_t latency;
+
+        if ((latency = pa_simple_get_latency(sout, &error)) == (pa_usec_t) -1) {
+            fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
+            goto finish;
+        }
+
+        fprintf(stderr, "%0.0f usec    \r", (float)latency);
+#endif
+
+        /* Record some data blocks from stream ... */
+        if (pa_simple_read(sout, buf, sizeof(buf), &error) < 0) {
+            fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
+        }
+	
+	if (send(sockfd,buf,sizeof(buf), 0) == -1)
+                perror("send");
+	//printf("sent a block");
+
+}
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -37,20 +69,17 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
-    int sockfd, numbytes,size;  
-    char buf[MAXDATASIZE];
+    int numbytes,size;  
+
     struct addrinfo hints, *servinfo, *p;
     int rv;
-    char s[INET6_ADDRSTRLEN];
+    char s[INET6_ADDRSTRLEN],buffer[10];
    /* The sample type to use */
     static const pa_sample_spec ss = {
         .format = PA_SAMPLE_S16LE,
         .rate = 8000,
         .channels = 2
     };
-    pa_simple *sout = NULL;
-    int ret = 1;
-    int error;
 
     /* Create the recording stream */
     if (!(sout = pa_simple_new(NULL, argv[0], PA_STREAM_RECORD, NULL, "record", &ss, NULL, NULL, &error))) {
@@ -62,6 +91,23 @@ int main(int argc, char *argv[])
         fprintf(stderr,"usage: client hostname\n");
         exit(1);
     }
+    /*Timer Initialization*/
+    it.it_value.tv_sec     = 0;      
+    it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
+    it.it_interval.tv_sec  = 0;     
+    it.it_interval.tv_usec = 20000;     /* repeat every 20 milli seconds */
+
+    signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
+
+
+    /* Here's your main program loop. The alarm handler
+     * function does its thing regardless of this
+     */
+    gettimeofday(&start, NULL);
+    printf("Call started at %ld\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
+     /* Turn on interval timer,ITIMER_REAL    
+     decrements in real time, and delivers SIGALRM upon expiration. */
+    setitimer(ITIMER_REAL, &it, NULL);
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC; 		//getaddrinfo gets socket address
@@ -100,47 +146,21 @@ int main(int argc, char *argv[])
     printf("client: connected to %s\n\n ", s);
     
     freeaddrinfo(servinfo); // all done with this structure
-    printf("Hey client Speak : ");
+    printf("Hey client Speak : \n");
     
- for (;;) {
-        uint8_t buf[BUFSIZE];
-
-/*latency varying from 30msec-400msec*/
-#if 0
-        pa_usec_t latency;
-
-        if ((latency = pa_simple_get_latency(sout, &error)) == (pa_usec_t) -1) {
-            fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
-            goto finish;
-        }
-
-        fprintf(stderr, "%0.0f usec    \r", (float)latency);
-#endif
-
-        /* Record some data blocks from stream ... */
-        if (pa_simple_read(sout, buf, sizeof(buf), &error) < 0) {
-            fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
-            goto finish;
-        }
-	
-	if (send(sockfd,buf,sizeof(buf), 0) == -1)
-                perror("send");
-	//printf("sent a block");
-	usleep(200);
+    printf("  To exit the program, Press any key.\n");
+    while (fgets(buffer, sizeof(buffer), stdin) && (strlen(buffer) > 1)) {
+        printf("You entered: %s\n", buffer);
     }
-    ret=0;
-finish:
+
+    printf("Bye\n");
     /*Finish by flushing the stream*/
+finish:
     if (sout)
         pa_simple_free(sout);
     close(sockfd);
-
     return 0;
 }
-
-
-
-
 
 
 
