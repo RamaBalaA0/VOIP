@@ -21,15 +21,37 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
-#define BUFSIZE 32
 
 
 //#define PORT "3490"  // the port users will be connecting to
 
 #define BACKLOG 10     // how many pending connections queue will hold
 
-#define MAXDATASIZE 100
-void sigchld_handler(int s)
+#define MAXDATASIZE 1024
+
+struct itimerval it;
+struct timeval start;
+uint8_t buf[MAXDATASIZE];
+int sockfd, new_fd,error,numbytes;
+pa_simple *st_in = NULL;
+
+void sigalrm_handler(int sig) {
+
+//printf("hello");	
+if ((numbytes = recv(new_fd, buf, sizeof(buf), 0)) == -1) {
+     perror("recv");
+     exit(1);
+     }
+
+/* ... and play it,writing the data to the stream */
+if (pa_simple_write(st_in, buf,sizeof(buf), &error) < 0) {
+     fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
+     exit(1);
+     }
+     //printf("Recieved a block");
+}
+
+void sigchld_handler(int sign)
 {
     // waitpid() might overwrite errno, so we save and restore it:
     int saved_errno = errno;
@@ -52,13 +74,13 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
-    int sockfd, new_fd,numbytes;  // listen on sock_fd, new connection on new_fd
+ // listen on sock_fd, new connection on new_fd
     struct addrinfo hints, *servinfo, *p;
     struct sockaddr_storage their_addr; // connector's address information
     socklen_t sin_size;
     struct sigaction sa;
     int yes=1;
-    char s[INET6_ADDRSTRLEN],buf[MAXDATASIZE];			//IPV6 address size.
+    char s[INET6_ADDRSTRLEN],buffer[10];
     int rv;
 
     memset(&hints, 0, sizeof hints);
@@ -155,69 +177,53 @@ The accept() function shall extract the first connection on  the  queue
             get_in_addr((struct sockaddr *)&their_addr),
             s, sizeof s);
         printf("server: got connection from %s\n", s);
+/*Timer Initialization*/
+    it.it_value.tv_sec     = 0;      
+    it.it_value.tv_usec    = 10000;    /* start in 10 milli seconds      */
+    it.it_interval.tv_sec  = 0;     
+    it.it_interval.tv_usec = 2000;     /* repeat every 2 milli seconds */
+
+    signal(SIGALRM, sigalrm_handler); /* Creating the handler for capturing voice stream  */
+
+
+    /* Here's your main program loop. The alarm handler
+     * function does its thing regardless of this
+     */
+    gettimeofday(&start, NULL);
+    printf("Call started at %ld\n\n",(start.tv_sec * 1000000 + start.tv_usec)   );
     /* The Sample format to use */
     static const pa_sample_spec ss = {
         .format = PA_SAMPLE_S16LE,			//signed 16 bit PCM Encoding
-        .rate = 8000,
+        .rate = 44100,
         .channels = 2
     };
 
-    pa_simple *s = NULL;
-    int ret = 1;
-    int error;
-
     /* Create a new playback stream */
-    if (!(s = pa_simple_new(NULL, argv[0], PA_STREAM_PLAYBACK, NULL, "playback", &ss, NULL, NULL, &error))) {
+    if (!(st_in = pa_simple_new(NULL, argv[0], PA_STREAM_PLAYBACK, NULL, "playback", &ss, NULL, NULL, &error))) {
         fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(error));
         goto finish;
     }
 
-//        if (!fork())
-//	 { // this is the child process
-//            close(sockfd); // child doesn't need the listener
-	        for (;;) {
-		uint8_t buf[BUFSIZE];
-		ssize_t r;
-		 //printf("hello");	
-		    if ((numbytes = recv(new_fd, buf, sizeof(buf), 0)) == -1) {
-	       		perror("recv");
-			exit(1);
-	    		}
-			/*latency of 300msec*/
-		#if 0
-			pa_usec_t latency;
+    printf(" Listen to client");
+    setitimer(ITIMER_REAL, &it, NULL);
+    printf("  To exit the program, Press 'Enter' key.\n");
+    while (fgets(buffer, sizeof(buffer), stdin) && (strlen(buffer) > 1)) {
+    }
 
-			if ((latency = pa_simple_get_latency(s, &error)) == (pa_usec_t) -1) {
-			    fprintf(stderr, __FILE__": pa_simple_get_latency() failed: %s\n", pa_strerror(error));
-			    goto finish;
-			}
-
-			fprintf(stderr, "%0.0f usec    \r", (float)latency);
-		#endif
-
-			/* ... and play it,writing the data to the stream */
-			if (pa_simple_write(s, buf,sizeof(buf), &error) < 0) {
-			    fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
-			    goto finish;
-			}
-			//printf("Recieved a block");
-			usleep(200);
-			//sleep(1);
-		 }
+    printf("Bye\n");
 
     /* Make sure that every single sample was played,Finishes by flushing the stream */
-	       if (pa_simple_drain(s, &error) < 0) {
+	       if (pa_simple_drain(st_in, &error) < 0) {
 		   fprintf(stderr, __FILE__": pa_simple_drain() failed: %s\n", pa_strerror(error));
 		   goto finish;
 	       }
-	       ret = 0;
 	finish:
-	       if (s)
-		   pa_simple_free(s);
-//        }
-//        close(new_fd);  // parent doesn't need this
+	       if (st_in)
+		   pa_simple_free(st_in);
     }
 
     return 0;
 }
 
+
+	        
