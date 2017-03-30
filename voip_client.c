@@ -20,16 +20,18 @@
 #include <pulse/simple.h>
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
+#include "G711.c"
 
 #define PORT "3490" 			// the port client will be connecting to 
 
-#define MAXDATASIZE 1024		// Packet size
-#define PERIOD 1			// Period in micro seconds 
+#define MAXDATASIZE 1024			// Packet size
+#define PERIOD 10			// Period in micro seconds 
 
 /*Global Varaibles */
 struct itimerval it;
 struct timeval start;
 pa_simple *sout = NULL;
+uint8_t buf[MAXDATASIZE];
 struct packet{
 long int time;
 uint8_t buf[MAXDATASIZE];
@@ -40,16 +42,23 @@ int sockfd,error;
 void sigalrm_handler(int sig)
 {
 struct packet *data;
-data=(struct packet *) malloc(sizeof(struct packet));
+//data=(struct packet *) malloc(sizeof(struct packet));
+uint16_t buff[MAXDATASIZE];
+int i;
+unsigned short temp;
 	
         /* Record some data blocks from stream ... */
-        if (pa_simple_read(sout, data->buf, sizeof(data->buf), &error) < 0) {
+        if (pa_simple_read(sout, buff, sizeof(buff), &error) < 0) {
             fprintf(stderr, __FILE__": pa_simple_read() failed: %s\n", pa_strerror(error));
         }
-	gettimeofday(&start, NULL);
-	data->time=start.tv_sec * 1000000 + start.tv_usec;
 	//printf("%ld",data->time);
-	if (send(sockfd,data,sizeof(struct packet), 0) == -1)		//Sending the packet with Timestamp and Data.
+	for(i=0;i<sizeof(buff);i++)
+	{
+	buf[i]=linear2alaw(buff[i]);
+	}
+//	gettimeofday(&start, NULL);
+//	data->time=start.tv_sec * 1000000 + start.tv_usec;
+	if (send(sockfd,buf,sizeof(buf), 0) == -1)		//Sending the packet with Timestamp and Data.
                 perror("send");
 	//printf("sent a block");
 
