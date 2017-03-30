@@ -21,6 +21,7 @@
 #include <pulse/simple.h>
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
+#include "G711.c"
 
 
 
@@ -28,11 +29,12 @@
 
 #define BACKLOG 1   			// how many pending connections queue will hold
 
-#define MAXDATASIZE 1024		// Packet size--1024
-#define PERIOD 1			// Period in micro seconds 
+#define MAXDATASIZE 1024			// Packet size--1024
+#define PERIOD 10			// Period in micro seconds 
 
 struct itimerval it;
 struct timeval start;
+uint8_t buf[MAXDATASIZE];
 struct packet{
 long int time;
 uint8_t buf[MAXDATASIZE];
@@ -42,21 +44,33 @@ int sockfd, new_fd,error,numbytes;
 pa_simple *st_in = NULL;
 
 void sigalrm_handler(int sig) {
-struct packet *data;
-data=(struct packet *) malloc(sizeof(struct packet));
+//struct packet *data;
+//data=(struct packet *) malloc(sizeof(struct packet));
+uint16_t buff[MAXDATASIZE];
+int i;
+unsigned short temp;
 	
-if ((numbytes = recv(new_fd, data, sizeof(struct packet), 0)) == -1) {
-     perror("recv");
-     exit(1);
-     }
-gettimeofday(&start, NULL);			//Detaching Timestamp from every packet and calculating transmit delay.
-fprintf(stderr, "Delay for every packet is %ld usec    \r",(start.tv_sec * 1000000 + start.tv_usec)-data->time);
+/*	if ((numbytes = recv(new_fd, data, sizeof(struct packet), 0)) == -1) {
+	     perror("recv");
+	     exit(1);
+	     }
+	gettimeofday(&start, NULL);			//Detaching Timestamp from every packet and calculating transmit delay.
+	fprintf(stderr, "Delay for every packet is %ld usec    \r",(start.tv_sec * 1000000 + start.tv_usec)-data->time);*/
+	if ((numbytes = recv(new_fd, buf, sizeof(buf), 0)) == -1) {
+	     perror("recv");
+	     exit(1);
+	     }
+	for(i=0;i<sizeof(buf);i++)
+	{
+	buff[i]=alaw2linear(buf[i]);
+	//printf("%d\n",buf1[i]);
+	}
 
 /* ... and play it,writing the data to the stream */
-if (pa_simple_write(st_in, data->buf,sizeof(data->buf), &error) < 0) {
-     fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
-     exit(1);
-     }
+	if (pa_simple_write(st_in, buff, sizeof(buff), &error) < 0) {
+	     fprintf(stderr, __FILE__": pa_simple_write() failed: %s\n", pa_strerror(error));
+	     exit(1);
+	     }
      //printf("Recieved a block");
 }
 
