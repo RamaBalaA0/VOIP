@@ -1,7 +1,7 @@
 BIN		= send
-OBJECTS 	= Rtp_Exemple_Send.o RTP.o Hdr_Builder.o Network.o Utils.o Rtp_Exemple_Receive_Print.o
+OBJECTS 	= Send.o RTP.o Hdr_Builder.o Network.o Utils.o Rtp_Exemple_Receive_Print.o
 BIN2		= receive
-OBJECTS2	= Rtp_Exemple_Receive.o RTP.o Hdr_Builder.o Network.o Utils.o Rtp_Exemple_Receive_Print.o
+OBJECTS2	= Receive.o RTP.o Hdr_Builder.o Network.o Utils.o Rtp_Exemple_Receive_Print.o
 CC = gcc
 
 all: send receive
@@ -9,8 +9,8 @@ all: send receive
 send: $(OBJECTS)
 	$(CC) $(OBJECTS) -o $(BIN)
 
-Rtp_Exemple_Send.o: Rtp_Exemple_Send.c
-	$(CC) -c Rtp_Exemple_Send.c
+Rtp_Exemple_Send.o: Send.c
+	$(CC) -c Send.c
 
 RTP.o: RTP.c
 	$(CC) -c RTP.c
@@ -27,8 +27,8 @@ Utils.o: Utils.c
 receive: $(OBJECTS2)
 	$(CC) $(OBJECTS2) -o $(BIN2)
 
-Rtp_Exemple_Receive.o: Rtp_Exemple_Receive.c
-	$(CC) -c Rtp_Exemple_Receive.c
+Rtp_Exemple_Receive.o: Receive.c
+	$(CC) -c Receive.c
 
 Rtp_Exemple_Receive_Print.o: Rtp_Exemple_Receive_Print.c
 	$(CC) -c Rtp_Exemple_Receive_Print.c
