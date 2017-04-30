@@ -17,7 +17,7 @@ VOIP+G711+RTP Client Side
 #include "RTP.h"
 #include "Macros.h"
 #include "Proto.h"
-#include "Rtp_Exemple_Receive.h"
+//#include "Rtp_Exemple_Receive.h"
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/wait.h>
@@ -41,6 +41,33 @@ VOIP+G711+RTP Client Side
 #include <pulse/simple.h>
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
+
+typedef struct
+{
+  struct sockaddr	*add;
+  int			len;
+  int			sid;
+} t_client;
+
+
+
+typedef struct
+{
+  int			fd;
+  struct sockaddr	*add;
+  int			len;
+  t_client		*clients;
+  int			family;
+  int			type;
+  int			port;
+} t_listener;
+
+
+struct us
+{
+  fd_set		fdset;
+  t_listener		*listeners;
+};
 
 #define handle_error(msg) \
 do { perror(msg); exit(EXIT_FAILURE); } while (0)

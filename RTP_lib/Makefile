@@ -28,7 +28,7 @@ Utils.o: Utils.c
 receive: $(OBJECTS2)
 	$(CC) $(OBJECTS2) $(LIBS) -o  $(BIN2)
 
-Rtp_Exemple_Receive.o: Receive.c
+Receive.o: Receive.c
 	$(CC) -c Receive.c
 
 #Rtp_Exemple_Receive_Print.o: Rtp_Exemple_Receive_Print.c
